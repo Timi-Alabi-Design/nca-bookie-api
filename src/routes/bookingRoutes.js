@@ -1,13 +1,11 @@
 const express = require('express');
 const router = express.Router();
-const authenticateUser = require('../middleware/authMiddleware');
+const { authenticateUser, requireAdmin } = require('../middleware/authMiddleware');
 const Booking = require('../models/Booking');
 
 router.get('/protected', authenticateUser, (req, res) => {
         res.json({ message: `Hello, ${req.user.userId}. You have access.` });
 });
-
-
 
 // Book a room
 router.post('/', authenticateUser, async (req, res) => {
@@ -106,6 +104,13 @@ router.get('/my', authenticateUser, async (req, res) => {
         const bookings = await Booking.find({ userId: req.user.userId }).populate('roomId');
         res.json(bookings);
 });
+
+// View all bookings (admin only)
+router.get('/all', authenticateUser, requireAdmin, async (req, res) => {
+        const bookings = await Booking.find().populate('roomId userId');
+        res.json(bookings);
+});
+
 
 
 module.exports = router;
