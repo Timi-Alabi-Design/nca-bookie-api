@@ -12,15 +12,35 @@ router.get('/protected', authenticateUser, (req, res) => {
 // Book a room
 router.post('/', authenticateUser, async (req, res) => {
         try {
-                const booking = await Booking.create({
-                        ...req.body,
-                        userId: req.user.userId
+                const { roomId, date, timeSlot, purpose } = req.body;
+                const userId = req.user.userId;
+
+                // Check for existing booking
+                const existingBooking = await Booking.findOne({
+                        roomId,
+                        date,
+                        timeSlot
                 });
-                res.status(201).json(booking);
+
+                if (existingBooking) {
+                        return res.status(400).json({ message: 'Room is already booked for this time slot.' });
+                }
+
+                const newBooking = await Booking.create({
+                        userId,
+                        roomId,
+                        date,
+                        timeSlot,
+                        purpose
+                });
+
+                res.status(201).json(newBooking);
         } catch (err) {
-                res.status(400).json({ message: 'Failed to book room', error: err });
+                console.error(err);
+                res.status(500).json({ message: 'Something went wrong while booking.', error: err });
         }
 });
+
 
 // Get bookings for logged-in user
 router.get('/my', authenticateUser, async (req, res) => {
