@@ -28,4 +28,5 @@ router.get('/my', authenticateUser, async (req, res) => {
         res.json(bookings);
 });
 
+
 module.exports = router;
