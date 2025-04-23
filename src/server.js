@@ -4,7 +4,10 @@ const cors = require("cors");
 require("dotenv").config();
 
 const authRoutes = require('./routes/authRoutes');
-const protectedRoutes = require('./routes/bookingRoutes');
+const roomRoutes = require('./routes/roomRoutes');
+const bookingRoutes = require('./routes/bookingRoutes');
+
+
 
 
 
@@ -19,7 +22,9 @@ app.use(express.json());
 // Routes
 app.get("/", (req, res) => res.send("NCA Bookie API Running..."));
 app.use('/api/auth', authRoutes);
-app.use('/api/bookings', protectedRoutes);
+app.use('/api/rooms', roomRoutes);
+app.use('/api/bookings', bookingRoutes);
+
 
 // DB + Server Start
 mongoose.connect(process.env.MONGO_URI)
