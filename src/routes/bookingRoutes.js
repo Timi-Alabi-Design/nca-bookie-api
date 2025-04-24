@@ -3,35 +3,24 @@ const router = express.Router();
 const { authenticateUser, requireAdmin } = require('../middleware/authMiddleware');
 const Booking = require('../models/Booking');
 
+// Protected Test Route
 router.get('/protected', authenticateUser, (req, res) => {
-        res.json({ message: `Hello, ${req.user.userId}. You have access.` });
+        res.json({ message: `Hello, ${req.user.name}. You have access.` });
 });
 
 // Book a room
 router.post('/', authenticateUser, async (req, res) => {
+        console.log("Booking Route Hit");
         try {
                 const { roomId, date, timeSlot, purpose } = req.body;
-                const userId = req.user.userId;
+                const userId = req.user._id; // ✅ Fixed
 
-                // Check for existing booking
-                const existingBooking = await Booking.findOne({
-                        roomId,
-                        date,
-                        timeSlot
-                });
-
+                const existingBooking = await Booking.findOne({ roomId, date, timeSlot });
                 if (existingBooking) {
                         return res.status(400).json({ message: 'Room is already booked for this time slot.' });
                 }
 
-                const newBooking = await Booking.create({
-                        userId,
-                        roomId,
-                        date,
-                        timeSlot,
-                        purpose
-                });
-
+                const newBooking = await Booking.create({ userId, roomId, date, timeSlot, purpose });
                 res.status(201).json(newBooking);
         } catch (err) {
                 console.error(err);
@@ -43,15 +32,12 @@ router.post('/', authenticateUser, async (req, res) => {
 router.put('/:id', authenticateUser, async (req, res) => {
         try {
                 const booking = await Booking.findById(req.params.id);
-
                 if (!booking) return res.status(404).json({ message: 'Booking not found.' });
 
-                // Only the user who booked can update it
-                if (booking.userId.toString() !== req.user.userId) {
+                if (booking.userId.toString() !== req.user._id.toString()) {
                         return res.status(403).json({ message: 'Not authorized to update this booking.' });
                 }
 
-                // Check for duplicate booking before updating
                 const { roomId, date, timeSlot } = req.body;
 
                 const conflict = await Booking.findOne({
@@ -80,28 +66,23 @@ router.put('/:id', authenticateUser, async (req, res) => {
 router.delete('/:id', authenticateUser, async (req, res) => {
         try {
                 const booking = await Booking.findById(req.params.id);
-
                 if (!booking) return res.status(404).json({ message: 'Booking not found.' });
 
-                // Ensure only owner can delete
-                if (booking.userId.toString() !== req.user.userId) {
+                if (booking.userId.toString() !== req.user._id.toString()) {
                         return res.status(403).json({ message: 'Not authorized to cancel this booking.' });
                 }
 
                 await booking.deleteOne();
                 res.json({ message: 'Booking cancelled successfully.' });
         } catch (err) {
-                console.log("Error canceling booking: ", err)
+                console.log("Error canceling booking: ", err);
                 res.status(500).json({ message: 'Failed to cancel booking.', error: err });
         }
 });
 
-
-
-
 // Get bookings for logged-in user
 router.get('/my', authenticateUser, async (req, res) => {
-        const bookings = await Booking.find({ userId: req.user.userId }).populate('roomId');
+        const bookings = await Booking.find({ userId: req.user._id }).populate('roomId');
         res.json(bookings);
 });
 
@@ -111,6 +92,31 @@ router.get('/all', authenticateUser, requireAdmin, async (req, res) => {
         res.json(bookings);
 });
 
+// Check availability before booking update
+router.post('/availability', authenticateUser, async (req, res) => {
+        const { roomId, date, timeSlot, bookingId } = req.body;
 
+        if (!roomId || !date || !timeSlot) {
+                return res.status(400).json({ available: false, message: 'Missing required fields.' });
+        }
+
+        try {
+                const existing = await Booking.findOne({
+                        roomId,
+                        date,
+                        timeSlot,
+                        _id: { $ne: bookingId } // Exclude current booking if editing
+                });
+
+                if (existing) {
+                        return res.json({ available: false, message: 'Room is already booked for that slot.' });
+                }
+
+                res.json({ available: true });
+        } catch (err) {
+                console.error('Availability check failed:', err);
+                res.status(500).json({ available: false, message: 'Server error checking availability.' });
+        }
+});
 
 module.exports = router;

@@ -24,6 +24,7 @@ exports.register = async (req, res) => {
 };
 
 exports.login = async (req, res) => {
+        console.log('ROUTE HIT')
         try {
                 const { email, password } = req.body;
 
@@ -38,7 +39,7 @@ exports.login = async (req, res) => {
                 // Sign token
                 const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: '7d' });
 
-                res.json({ token, user: { id: user._id, name: user.name, email: user.email } });
+                res.json({ token, user: { id: user._id, name: user.name, email: user.email, role: user.role } });
 
         } catch (error) {
                 res.status(500).json({ message: 'Something went wrong.', error });

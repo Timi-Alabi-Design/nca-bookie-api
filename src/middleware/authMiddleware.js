@@ -1,6 +1,7 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 
+// authMiddleware.js
 const authenticateUser = async (req, res, next) => {
         const authHeader = req.headers.authorization;
         if (!authHeader?.startsWith('Bearer ')) {
@@ -11,11 +12,11 @@ const authenticateUser = async (req, res, next) => {
 
         try {
                 const decoded = jwt.verify(token, process.env.JWT_SECRET);
-                const user = await User.findById(decoded.userId);
+                const user = await User.findById(decoded.userId); // ✅ Check that this returns full user object
 
                 if (!user) return res.status(401).json({ message: 'User not found.' });
 
-                req.user = user; // Full user object now available
+                req.user = user; // ✅ Ensures _id is present
                 next();
         } catch (err) {
                 return res.status(401).json({ message: 'Invalid token.' });
@@ -29,8 +30,5 @@ const requireAdmin = (req, res, next) => {
         }
         next();
 };
-
-
-
 
 module.exports = { authenticateUser, requireAdmin };
